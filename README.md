@@ -88,5 +88,45 @@ You will receive an individual API Key for class assignments. To prevent acciden
    API_KEY="your_actual_API_KEY" streamlit run your-file-name.py
    ```
 
-## Troubleshooting
-- The Jupyter extension should install automatically. If you still cannot select a Python kernel on Jupyter Notebook: Go to the left sidebar >> **Extensions** >> search for **Jupyter** >> reload window (or reinstall it).   
+## Multi-file question answering system
+
+### Overview
+Allows user to upload multiple pdf and txt and then ask questions about them. Uses APIs, Streamlit, LangChain, and Chromadb to power the system. 
+
+Covers:
+- Utilize the Provided Codespace Setup
+- File Upload Functionality for .txt Files
+- RAG System and Conversational Interface. Including Document Ingestion and Chunking, Retrieval-Augmented Generation, Conversational Interface
+- Support for .txt and .pdf File Formats
+- Ability to Add Multiple Documents
+
+### To Run:
+
+Open codespaces. 
+
+Then install requirements
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+Provide API key and run application
+   ```bash
+   API_KEY="your-key" streamlit run chat_with_pdf.py
+   ```
+ 
+The chat will be available in localhost, usually at `http://localhost:8501`
+
+To use the application:
+First upload documents (txt or pdf) and then ask question about the documents in the chat feature at the bottom. 
+If desired remove documents indivually of clear all the documents. Also, sources will get cited in the answer. 
+
+### Technical Aspects
+The user interface is powered by Streamlit which the connects to the backend to handle the documents. In the backend, the documents are uploaded, chunked, embedding are created, and vector similarity is channeled. For the RAG pipeline the user asks questions, then similarity search with top 5 chunks and producing answers via the API. 
+
+Chunking as per industry standards are 1000 character chunks, 250 character overlap, and use of 5 top chunks per similarity. In answers, sources will be provided. 
+
+### Changes to configurations
+**`requirements.txt`** dependencies added to power the system 
+
+
+

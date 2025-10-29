@@ -1,1 +1,1 @@
-Gemini, Claude and ChatGPT tools to support debugging, clarify concepts, and improve code readabilty. 
+Gemini, Claude and ChatGPT tools used to support debugging, clarify concepts, and improve code readabilty. Uses APIs, Streamlit, LangChain, and Chromadb.
