@@ -1,3 +1,4 @@
+# Necesary imports 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import os
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
@@ -6,9 +7,11 @@ from langchain_chroma import Chroma
 import tempfile
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+# Handles keys 
 os.environ['OPENAI_API_KEY'] = os.environ["API_KEY"]
 os.environ['OPENAI_BASE_URL'] = 'https://api.ai.it.cornell.edu'
 
+"Upload documents to then answer questions from"
 def upload_document(file, add_source_metadata=True):
     file_extension = os.path.splitext(file.name)[1].lower()
     
@@ -16,6 +19,7 @@ def upload_document(file, add_source_metadata=True):
         tmp.write(file.getvalue())
         tmp_path = tmp.name
     
+    # Handles pdf and txt
     try:
         if file_extension == '.pdf':
             loader = PyPDFLoader(tmp_path)
@@ -25,7 +29,7 @@ def upload_document(file, add_source_metadata=True):
             raise ValueError(f"Unsupported file type: {file_extension}")
         
         docs = loader.load()
-        
+        # load 
         if add_source_metadata:
             for doc in docs:
                 if not hasattr(doc, 'metadata') or doc.metadata is None:
@@ -36,14 +40,14 @@ def upload_document(file, add_source_metadata=True):
     finally:
         os.unlink(tmp_path)
 
-
+# Multi document uploads
 def upload_multiple_documents(files):
     all_docs = []
     for file in files:
         all_docs.extend(upload_document(file, add_source_metadata=True))
     return all_docs
 
-
+# chuncking 
 def get_document_chunks(docs):
     return RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -52,13 +56,14 @@ def get_document_chunks(docs):
         chunk_overlap=250
     ).split_documents(docs)
 
-def create_vectorstore(chunks):
+# Create vector store
+def vectorstore(chunks):
     return Chroma.from_documents(
         documents=chunks, 
         embedding=OpenAIEmbeddings(model="openai.text-embedding-3-large")
     )
 
-
+# RAG prompt ans results 
 def get_prompt_results(question, vectorstore, history=None):
     try:
         docs = vectorstore.similarity_search(question, k=5)
@@ -69,6 +74,7 @@ def get_prompt_results(question, vectorstore, history=None):
             context_parts.append(f"[Chunk {i+1} from {source_file}]\n{d.page_content}")
         context = "\n\n".join(context_parts)
         
+        # Content context added for the LLM to process better the question
         msgs = [{
             "role": "system", 
             "content": "Provide answers depending on the context of the document or documents that were presented. Use only the details from the given context. If there is insufficient background to provide a response, make this apparent. When appropriate, include clear context references and keep your writing brief. If more than one document has the same information, you can identify which document or documents the information is from. To get perspective, think about past conversation turns."
@@ -87,15 +93,16 @@ def get_prompt_results(question, vectorstore, history=None):
     except Exception as e:
         raise RuntimeError(f"Error generating answer: {str(e)}")
 
+# Title
 st.set_page_config(page_title="Document Q&A", initial_sidebar_state="expanded")
 
 for key, default in {"messages": [], "vectorstore": None, "processed_files": set(), "uploader_key": 0, "chunk_count": 0}.items():
     if key not in st.session_state:
         st.session_state[key] = default
-
+# Title
 st.title("Multi-Document Q&A System")
 
-
+# Provide sources in the documents
 def show_sources(sources):
     with st.expander(f"Sources ({len(sources)} chunks)", expanded=False):
         for i, doc in enumerate(sources, 1):
@@ -107,7 +114,7 @@ def show_sources(sources):
             if i < len(sources):
                 st.divider()
 
-
+# Left sidebar to upload and support documents
 with st.sidebar:
     st.header("Upload Documents")
     
@@ -121,6 +128,7 @@ with st.sidebar:
     
     st.caption("Select .txt or .pdf files to upload")
     
+    # Handle uploaded files
     if uploaded_files:
         seen_files = {}
         for file in uploaded_files:
@@ -148,7 +156,7 @@ with st.sidebar:
                 try:
                     all_docs = upload_multiple_documents(uploaded_files)
                     all_chunks = get_document_chunks(all_docs)
-                    st.session_state.vectorstore = create_vectorstore(all_chunks)
+                    st.session_state.vectorstore = vectorstore(all_chunks)
                     st.session_state.processed_files = current_file_names.copy()
                     st.session_state.chunk_count = len(all_chunks)
                 except Exception as e:
@@ -156,6 +164,7 @@ with st.sidebar:
             
             st.rerun()
         
+        # New files
         new_files = [f for f in uploaded_files if f.name not in st.session_state.processed_files]
         if new_files:
             with st.spinner(f"Processing {len(new_files)} file(s)..."):
@@ -168,7 +177,7 @@ with st.sidebar:
                         st.session_state.messages = []
                         st.session_state.chunk_count += len(new_chunks)
                     else:
-                        st.session_state.vectorstore = create_vectorstore(new_chunks)
+                        st.session_state.vectorstore = vectorstore(new_chunks)
                         st.session_state.messages = []
                         st.session_state.chunk_count = len(new_chunks)
                     
@@ -235,6 +244,8 @@ else:
 
 prompt_text = "Ask about the documents..." if len(set(st.session_state.processed_files)) > 1 else "Ask about the document..."
 
+
+# Prompt and session
 if prompt := st.chat_input(prompt_text, disabled=not st.session_state.vectorstore):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
